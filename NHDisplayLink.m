@@ -92,8 +92,8 @@ typedef enum : unsigned {
         
         _isRunning = true;
         
-        // We CFRetain self while the bg thread is active, to ensure it always
-        // has a valid pointer. The CFRetain is undone by [1].
+        // We CFRetain self while the displaylink thread is active, to ensure it
+        // always has a valid 'self' pointer. The CFRetain is undone by [1].
         CFRetain((__bridge CFTypeRef)self);
         
         CVDisplayLinkStart(_displayLink);
