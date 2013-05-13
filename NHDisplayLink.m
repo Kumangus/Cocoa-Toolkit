@@ -68,7 +68,7 @@ typedef enum : unsigned {
         dispatch_set_target_queue(_internalDispatchQueue, _clientDispatchQueue);
         
         CVDisplayLinkSetOutputCallback(_displayLink, NHDisplayLinkCallback,
-                                       (void*)CFBridgingRetain(self));
+                                       (__bridge void*)self);
     }
     
     return self;
