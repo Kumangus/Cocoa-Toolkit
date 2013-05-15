@@ -9,6 +9,9 @@
 #import "NHViewController.h"
 #import <objc/runtime.h>
 
+#import "NHViewControllerInternal.h"
+#import "NHObjCRuntime.h"
+
 @interface NHViewController () {
     // See comment in -setView:
     NSUInteger _setViewReentrancyCounter;
@@ -17,12 +20,12 @@
 @end
 
 typedef void (*SetNextResponderIMP)(NSView*, SEL, NSResponder*);
-static SetNextResponderIMP g_OriginalSetNextResponderIMP;
-static dispatch_once_t s_didPatchNSView_setNextResponder;
+static SetNextResponderIMP s_OriginalSetNextResponderIMP;
 
 @implementation NHViewController
 
 - (void)setView:(NSView *)newView {
+    static dispatch_once_t s_didPatchNSView_setNextResponder;
     dispatch_once_f(&s_didPatchNSView_setNextResponder, NULL,
                     NHPatchNSView_setNextResponder);
     
@@ -39,12 +42,12 @@ static dispatch_once_t s_didPatchNSView_setNextResponder;
     NSView *currentView = self.view;
         
     if (currentView) {
-        NHSetViewControllerForView(currentView, nil);
+        [currentView nh_setViewController:nil];
         [table removeObjectForKey:currentView];
     }
     
     if (newView) {
-        NHSetViewControllerForView(newView, self);
+        [newView nh_setViewController:self];
         [table setObject:self forKey:newView];
     }
     
@@ -62,49 +65,50 @@ static NSMapTable * NHGetViewToViewControllerMap() {
     return table;
 }
 
-static NHViewController * NHGetViewControllerForView(NSView * v) {
-    return [NHGetViewToViewControllerMap() objectForKey:v];
+// Patch NSView -setNextResponder: to first check if it has a
+// NHViewController set.
+static void NHPatchNSView_setNextResponder(void* unused) {
+    SEL selector = @selector(setNextResponder:);
+
+    s_OriginalSetNextResponderIMP
+        = (SetNextResponderIMP)NHObjCReplaceInstanceMethod([NSView class],
+                                                           selector,
+            ^(NSView *view, NSResponder *responder) {
+                NHViewController *vc = [view nh_viewController];
+                if (vc) {
+                    assert(view.nextResponder == vc);
+                    [vc setNextResponder:responder];
+                } else {
+                    s_OriginalSetNextResponderIMP(view, selector, responder);
+                }
+            });
 }
 
-static void NHSetViewControllerForView(NSView *view,
-                                       NHViewController *newController) {
-    NSViewController *currentController = NHGetViewControllerForView(view);
+@end
+
+
+@implementation NSView (NHViewController)
+
+- (NHViewController*)nh_viewController {
+    return [NHGetViewToViewControllerMap() objectForKey:self];
+}
+
+- (void)nh_setViewController:(NHViewController *)newController {
+    NSViewController *currentController = self.nh_viewController;
     
     if (currentController) {
         NSResponder *controllerNextResponder = currentController.nextResponder;
-        g_OriginalSetNextResponderIMP(view, @selector(setNextResponder:),
+        s_OriginalSetNextResponderIMP(self, @selector(setNextResponder:),
                                       controllerNextResponder);
         currentController.nextResponder = nil;
     }
     
     if (newController) {
-        NSResponder *ownNextResponder = view.nextResponder;
-        g_OriginalSetNextResponderIMP(view, @selector(setNextResponder:),
+        NSResponder *ownNextResponder = self.nextResponder;
+        s_OriginalSetNextResponderIMP(self, @selector(setNextResponder:),
                                       newController);
         currentController.nextResponder = ownNextResponder;
     }
-}
-
-// Patch NSView -setNextResponder: to first check if it has a
-// NHViewController set.
-static void NHPatchNSView_setNextResponder(void* unused) {
-    SEL selector = @selector(setNextResponder:);
-    
-    Method m = class_getInstanceMethod([NSView class], selector);
-    
-    g_OriginalSetNextResponderIMP =
-    (SetNextResponderIMP)method_getImplementation(m);
-    
-    method_setImplementation(m, imp_implementationWithBlock(
-        ^(NSView *view, NSResponder *responder) {
-            NHViewController *vc = NHGetViewControllerForView(view);
-            if (vc) {
-                assert(view.nextResponder == vc);
-                [vc setNextResponder:responder];
-            } else {
-                g_OriginalSetNextResponderIMP(view, selector, responder);
-            }
-        }));
 }
 
 @end
