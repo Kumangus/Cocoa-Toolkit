@@ -3,6 +3,7 @@ A grab-bag of useful utility code that I've found useful when developing for Mac
 
 ## NHUnit
 A few useful extensions for SenTestingKit (aka OCUnit) to aid unit testing. Specifically:
+
 - Easier parameterised testing. Declare a subclass of `NHParameterisedTestCase` and override `+[testCaseParameters]` to return an array of dicts containing test data that makes sense for your tests. NHParameterisedTestCase will then instantiate an instance of your subclass for the cross product of the test data and your `-[test...]` methods.
 
   You can retrieve the parameters dictionary using the `self.parameters` property. Better yet, if you declare properties with the same names as your parameters dictionary keys, we'll use KVC to set them automatically.
