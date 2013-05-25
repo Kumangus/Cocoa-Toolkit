@@ -7,21 +7,23 @@ A few useful extensions for SenTestingKit (aka OCUnit) to aid unit testing. Spec
 
   You can retrieve the parameters dictionary using the `self.parameters` property. Better yet, if you declare properties with the same names as your parameters dictionary keys, we'll use KVC to set them automatically.
 
-        @interface MyTestCase : NHParameterisedTestCase
-        @property int fooBar;
-        @end
-        
-        @implementation MyTestCase
-        + (NSArray *)testCaseParameters {
-          return @[ @{ @"fooBar": @42, @"someKey": @"someValue"} ];
-        }
-        
-        - (void)testAllTheThings {
-          STAssertEquals(self.fooBar, 42, @"");
-          STAssertEqualObjects(self.parameters[@"fooBar"], @42, @"");
-          STAssertEqualObjects(self.parameters[@"someKey"], @"someValue", @"");
-        }
-        @end
+    ```objective-c
+    @interface MyTestCase : NHParameterisedTestCase
+    @property int fooBar;
+    @end
+    
+    @implementation MyTestCase
+    + (NSArray *)testCaseParameters {
+      return @[ @{ @"fooBar": @42, @"someKey": @"someValue"} ];
+    }
+    
+    - (void)testAllTheThings {
+      STAssertEquals(self.fooBar, 42, @"");
+      STAssertEqualObjects(self.parameters[@"fooBar"], @42, @"");
+      STAssertEqualObjects(self.parameters[@"someKey"], @"someValue", @"");
+    }
+    @end
+    ```
 
 - Support for waiting (with a timeout) for an asynchronous test to complete. 
   Use the `NHUAssertCompletesWithTimeout()` macro to poll the current run-loop
