@@ -21,7 +21,7 @@
   
   CFRunLoopTimerRef timer = CFRunLoopTimerCreateWithHandler(kCFAllocatorDefault,
       CFAbsoluteTimeGetCurrent() + timeout, DBL_MAX, 0, 0,
-      ^(CFRunLoopTimerRef timer) {
+      ^(CFRunLoopTimerRef blockTimer) {
         if (dispatchGroupWasSignalled)
           return;
         
@@ -37,14 +37,15 @@
 
   dispatch_queue_t q = dispatch_get_global_queue(
       DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
+  CFRetain(timer);  // [1]
   dispatch_group_notify(grp, q, ^{
     CFRunLoopPerformBlock(rl, kCFRunLoopCommonModes, ^{
-      if (timerDidFire)
-        return;
-
-      dispatchGroupWasSignalled = true;
-      CFRunLoopTimerInvalidate(timer);
-      CFRunLoopStop(rl);
+      if (!timerDidFire) {
+        dispatchGroupWasSignalled = true;
+        CFRunLoopTimerInvalidate(timer);
+        CFRunLoopStop(rl);
+      }
+      CFRelease(timer); // balances [1]
     });
     CFRunLoopWakeUp(rl);
   });
