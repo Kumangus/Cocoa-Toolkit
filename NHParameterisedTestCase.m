@@ -34,8 +34,16 @@
   
   for (NSInvocation *testInvocation in self.testInvocations) {
     for (NSDictionary *parameters in parameterisedTestData) {
+      // Strange things happen if you try to use one NSInvocation for multiple
+      // test cases. Probably a bug, but we can work around it by cloning
+      // the NSInvocation.
+      // See http://briancoyner.github.io/blog/2011/09/12/ocunit-parameterized-test-case/#comment-837283739
+      NSInvocation *invocationClone = [NSInvocation
+            invocationWithMethodSignature:testInvocation.methodSignature];
+      invocationClone.selector = testInvocation.selector;
+      
       NHParameterisedTestCase *test =
-          [[self alloc] initWithInvocation:testInvocation];
+          [[self alloc] initWithInvocation:invocationClone];
       test.parameters = parameters;
       [test setValuesForKeysWithDictionary:parameters];
       [testSuite addTest:test];
