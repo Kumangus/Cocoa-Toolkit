@@ -22,4 +22,8 @@
 /// the test data dictionary for the current test instance.
 @property (readonly) NSDictionary *parameters;
 
+/// The current test run. This is different to the (poorly-named) -[run] method
+/// on SenTest, which has side effects.
+@property (readonly) SenTestRun *testRun;
+
 @end

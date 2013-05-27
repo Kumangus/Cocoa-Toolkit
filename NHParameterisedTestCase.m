@@ -10,6 +10,8 @@
 
 @interface NHParameterisedTestCase ()
 @property (readwrite) NSDictionary *parameters;
+@property SenTestRun *testRun;
+
 @end
 
 @implementation NHParameterisedTestCase
@@ -53,8 +55,11 @@
   return testSuite;
 }
 
+- (void)performTest:(SenTestRun *)aRun {
+  self.testRun = aRun;
+  [super performTest:aRun];
+}
+
+
+
 @end
-
-
-
-
