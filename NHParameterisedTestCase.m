@@ -1,6 +1,6 @@
 //
 //  NHParameterisedTestCase
-//  UnitTests
+//  CocoaUtils
 //
 //  Created by Nick Hutchinson on 23/05/2013.
 //  Copyright (c) 2013 Nick Hutchinson. All rights reserved.
@@ -18,8 +18,10 @@
 
 @implementation NHParameterisedTestCase
 - (void)setValue:(id)value forUndefinedKey:(NSString *)key {
+  // NSObject's implementation throws an exception by default, but we'll be
+  // kind and ignore it for keys the client has defined in the parameters dict
   if (self.parameters[key])
-    return;  // ignore if the subclass hasn't provided one
+    return;
 
   [super setValue:value forUndefinedKey:key];
 }
@@ -29,6 +31,8 @@
 }
 
 + (id)defaultTestSuite {
+  // Fallback to default behaviour if client hasn't overridden
+  // +parameterisedTestData. 
   NSArray *parameterisedTestData = self.parameterisedTestData;
   if (!parameterisedTestData)
     return [super defaultTestSuite];

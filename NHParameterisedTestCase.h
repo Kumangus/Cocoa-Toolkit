@@ -9,14 +9,18 @@
 #import <SenTestingKit/SenTestingKit.h>
 
 /// @class NHParameterisedTestCase
-/// Facilitates easier parameterised testing. Declare a subclass and NHParameterisedTestCase
-/// will then instantiate an instance of your subclass for all combinations of your test
-/// data and your `-[test...]` methods.
+/// Facilitates easier parameterised testing. Declare a subclass and
+/// NHParameterisedTestCase will then instantiate an instance of your subclass
+/// for all combinations of your test data and your `-[test...]` methods.
 
 @interface NHParameterisedTestCase : SenTestCase
 
-/// Override this in your subclass to return an array of NSDictionarys that containing test data
-/// that makes sense for your tests.
+/// Override this in your subclass to return an array of NSDictionarys that
+/// contain test data to be used by your test methods. In your test methods,
+/// you can access this dict using the `parameters` property.
+///
+/// As a convenience, if you declare any KVC-compliant @properties in your
+/// subclass with the same names as the dictionary keys, we'll set them.
 + (NSArray *)parameterisedTestData;
 
 /// the test data dictionary for the current test instance.
