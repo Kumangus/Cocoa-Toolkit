@@ -9,7 +9,9 @@
 #import "NHParameterisedTestCase.h"
 
 @interface NHParameterisedTestCase ()
-@property (readwrite) NSDictionary *parameters;
+
+@property NSDictionary *parameters;
+@property NSUInteger testIndex;
 @property SenTestRun *testRun;
 
 @end
@@ -35,6 +37,7 @@
       [[SenTestSuite alloc] initWithName:NSStringFromClass(self.class)];
   
   for (NSInvocation *testInvocation in self.testInvocations) {
+    NSUInteger idx = 0;
     for (NSDictionary *parameters in parameterisedTestData) {
       // Strange things happen if you try to use one NSInvocation for multiple
       // test cases. Probably a bug, but we can work around it by cloning
@@ -47,6 +50,7 @@
       NHParameterisedTestCase *test =
           [[self alloc] initWithInvocation:invocationClone];
       test.parameters = parameters;
+      test.testIndex = idx++;
       [test setValuesForKeysWithDictionary:parameters];
       [testSuite addTest:test];
     }
@@ -60,6 +64,13 @@
   [super performTest:aRun];
 }
 
+- (void)tearDown {
+  [super tearDown];
 
+  if (self.parameters && !self.testRun.hasSucceeded) {
+    [SenTestLog testLogWithFormat:@"Parameterised test data (#%lu) was: %@\n",
+     (unsigned long)self.testIndex, self.parameters];
+  }
+}
 
 @end
