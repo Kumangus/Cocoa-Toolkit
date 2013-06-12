@@ -7,12 +7,15 @@
 //
 
 #import "NHParameterisedTestCase.h"
+#import <objc/runtime.h>
 
 @interface NHParameterisedTestCase ()
 
-@property NSDictionary *parameters;
-@property NSUInteger testIndex;
 @property SenTestRun *testRun;
+
+@property NSDictionary *parameters;
+
+@property NSUInteger testIndex, testCount;
 
 @end
 
@@ -41,22 +44,32 @@
       [[SenTestSuite alloc] initWithName:NSStringFromClass(self.class)];
   
   for (NSInvocation *testInvocation in self.testInvocations) {
-    NSUInteger idx = 0;
+    NSUInteger parametersIndex = 0;
     for (NSDictionary *parameters in parameterisedTestData) {
-      // Strange things happen if you try to use one NSInvocation for multiple
-      // test cases. Probably a bug, but we can work around it by cloning
-      // the NSInvocation.
-      // See http://briancoyner.github.io/blog/2011/09/12/ocunit-parameterized-test-case/#comment-837283739
-      NSInvocation *invocationClone = [NSInvocation
+      // So it's easier to identify the set of test data that causes the
+      // failure, we generate new methods with '_XofY' appended to the end.
+      SEL mangledSelector = NSSelectorFromString([NSString stringWithFormat:
+          @"%s_%zuof%zu", sel_getName(testInvocation.selector),
+          parametersIndex+1, parameterisedTestData.count]);
+      
+      Method m = class_getInstanceMethod(self.class, testInvocation.selector);
+      class_replaceMethod(self.class, mangledSelector,
+                          method_getImplementation(m),
+                          method_getTypeEncoding(m));
+      
+      NSInvocation *parameterisedInvocation = [NSInvocation
             invocationWithMethodSignature:testInvocation.methodSignature];
-      invocationClone.selector = testInvocation.selector;
+      parameterisedInvocation.selector = mangledSelector;
       
       NHParameterisedTestCase *test =
-          [[self alloc] initWithInvocation:invocationClone];
+          [[self alloc] initWithInvocation:parameterisedInvocation];
       test.parameters = parameters;
-      test.testIndex = idx++;
+      test.testIndex = parametersIndex;
+      test.testCount = parameterisedTestData.count;
       [test setValuesForKeysWithDictionary:parameters];
       [testSuite addTest:test];
+      
+      parametersIndex++;
     }
   }
   
@@ -72,8 +85,8 @@
   [super tearDown];
 
   if (self.parameters && !self.testRun.hasSucceeded) {
-    [SenTestLog testLogWithFormat:@"Parameterised test data (#%lu) was: %@\n",
-     (unsigned long)self.testIndex, self.parameters];
+    [SenTestLog testLogWithFormat:@"Test parameters (%zu of %zu) were: %@\n",
+     self.testIndex+1, self.testCount, self.parameters];
   }
 }
 
